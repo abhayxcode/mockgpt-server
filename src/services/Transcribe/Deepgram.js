@@ -1,5 +1,5 @@
 const { LiveTranscriptionEvents, createClient } = require("@deepgram/sdk");
-const { clearWsClient, processResponse } = require("../../utils/Helper");
+const { clearWsClient, processResponse, sendUserTranscription } = require("../../utils/Helper");
 const {
   deepgramModel,
   deepgramLanguage,
@@ -131,8 +131,9 @@ function deepgramEvents(ws, deepgramConnection, index) {
     }
     if (data.is_final === true && ws.text.trim().length > 0) {
       ws.finalResult += `${ws.text} `;
-      console.log('MESSAGE SENDING TO FRONTEWN')
-
+      
+      // Sending user transcription to the ws client (back to user)
+      console.log('speech final: ', ws.finalResult)
       
       // if speech_final and is_final that means this text is accurate and it's a natural pause in the speakers speech. We need to send this to the assistant for processing
       if (
@@ -140,6 +141,12 @@ function deepgramEvents(ws, deepgramConnection, index) {
         ws.utteranceEndText.trim().length === 0
       ) {
         ws.speechFinal = true; // this will prevent a utterance end which shows up after speechFinal from sending another response
+        
+        
+        // Sending user transcription to the ws client (back to user)
+        console.log('speech final: ', ws.finalResult)
+        sendUserTranscription(ws,ws.finalResult);
+        
         processDeepgramTranscription(ws, "speech final",ws.finalResult);
         ws.finalResult = "";
         ws.text = "";
@@ -149,6 +156,23 @@ function deepgramEvents(ws, deepgramConnection, index) {
       }
     }
   });
+
+  deepgramConnection.on(LiveTranscriptionEvents.UtteranceEnd,  async () => {
+    ws.utteranceEndText = ws.finalResult;
+
+    console.log('utterance end: ', ws.finalResult)
+    if (ws.utteranceEndText.trim().length > 0 && !ws.speechFinal) {
+      // Sending user transcription to the ws client (back to user)
+      console.log('utterance end: ', ws.finalResult)
+      sendUserTranscription(ws,ws.finalResult);
+
+      processDeepgramTranscription(ws, "utterance end", ws.utteranceEndText);
+
+      ws.finalResult = "";
+      ws.text = "";
+      ws.utteranceEndText = "";
+    }
+  })
 }
 
 /**

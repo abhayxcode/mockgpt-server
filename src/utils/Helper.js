@@ -13,7 +13,7 @@ async function sleep(ms) {
 }
 
 
-/* Sends a media event for a given websocket client.
+/**  Sends a media event for a given websocket client.
 * @param {Websocket Connection} ws - Client for which the media event needs to be sent.
 * @param {Audio Buffer} data - Audio Buffer data that needs to be sent to the client.
 */
@@ -27,7 +27,23 @@ function sendTextClient(ws,text) {
   };
   ws.send(JSON.stringify(twilioOutputEvent));
 }
-/* Sends a media event for a given websocket client.
+
+/**  Sends a media event for a given websocket client.
+* @param {Websocket Connection} ws - Client for which the media event needs to be sent.
+* @param {Audio Buffer} data - Audio Buffer data that needs to be sent to the client.
+*/
+function sendUserTranscription(ws,text) {
+  const twilioOutputEvent = {
+    event: "user",
+    media: {
+      payload: text
+    }
+    // streamSid: ws.sessionData.streamSID,
+  };
+  ws.send(JSON.stringify(twilioOutputEvent));
+}
+
+/**  Sends a media event for a given websocket client.
 * @param {Websocket Connection} ws - Client for which the media event needs to be sent.
 * @param {Audio Buffer} data - Audio Buffer data that needs to be sent to the client.
 */
@@ -72,16 +88,9 @@ async function processResponse(ws, content, sectionName) {
     ws.sessionData.messageContent.push({ role: "user", content: content });
     ws.accumulatedText = "";
     await sleep(1000);
-    console.log('112123123123')
     ws.sessionData.isInterupptionDetected = false;
     ws.sessionData.currentAssistantMessage = "";
    
-  //  const responseFromOpenAI = await chatCompletions( ws.sessionData.messageContent)
-  //  console.log('222222222222')
-  //  await openAIToPolly(
-  //              responseFromOpenAI,
-  //                 ws
-  //               );
     await streamingChatCompletions(
       ws.sessionData.callSID,
       ws.sessionData.messageContent,
@@ -99,12 +108,11 @@ async function processResponse(ws, content, sectionName) {
             const punctuationRegex = /[.?!।]/;
             const match = ws.accumulatedText.match(punctuationRegex);
             if (match) {
-              console.log('222222222222')
+              sendTextClient( ws, ws.accumulatedText.substring(0, match.index + 1))
               await openAIToPolly(
                 ws.accumulatedText.substring(0, match.index + 1),
                 ws
               );
-              sendTextClient( ws, ws.accumulatedText.substring(0, match.index + 1))
               ws.accumulatedText =
               match.index + 1 > ws.accumulatedText.length
               ? ""
@@ -152,12 +160,11 @@ async function openAIToPolly(message, ws) {
       message = message.substring(0, index - 1);
       sendCheckPointEvent(ws); // Hangup call if [Cut the call] present
     }
-    
-    console.log('3333333333333')
+   
     const data = await getPollyStreams(message);
     
     sendMediaEvent(ws, data);
-      console.log('444444444444')
+    
     // for (let xx = 0; xx < data.length; xx += 10) {
     //   if (ws.sessionData && ws.sessionData.isInterupptionDetected) {
     //     clearWsClient(ws);
@@ -167,7 +174,6 @@ async function openAIToPolly(message, ws) {
       
     //   console.log('444444444444')
     //   sendMediaEvent(ws, data);
-      
     // }
 
     if (ws.sessionData && !ws.sessionData.isInterupptionDetected) {
@@ -256,6 +262,7 @@ module.exports = {
   sleep,
   clearWsClient,
   sendMediaEvent,
+  sendUserTranscription,
   processResponse,
   openAIToPolly,
   getCallOutcome,
