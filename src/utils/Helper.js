@@ -192,18 +192,18 @@ async function openAIToPolly(message, ws) {
 
 // Get Call Outcome
 async function getCallOutcome(conversationDetail, callOutcomePrompt) {
-  const newDate = new Date().toISOString().split("T");
-  const currentDate = newDate[0];
-  const currentTime = newDate[1].split(".")[0];
+  // const newDate = new Date().toISOString().split("T");
+  // const currentDate = newDate[0];
+  // const currentTime = newDate[1].split(".")[0];
   // Replacing date and time in outcome prompt
-  callOutcomePrompt = callOutcomePrompt.replaceAll(
-    "[Current_Date]",
-    currentDate
-  );
-  callOutcomePrompt = callOutcomePrompt.replaceAll(
-    "[Current_Time]",
-    currentTime
-  );
+  // callOutcomePrompt = callOutcomePrompt.replaceAll(
+  //   "[Current_Date]",
+  //   currentDate
+  // );
+  // callOutcomePrompt = callOutcomePrompt.replaceAll(
+  //   "[Current_Time]",
+  //   currentTime
+  // );
 
   const messageContent = [
     { role: "user", content: conversationDetail },

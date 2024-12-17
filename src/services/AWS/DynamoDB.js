@@ -29,8 +29,6 @@ const createInterviewEntry = async (interviewDetails) => {
 
 // Update Interview details
 const updateInterviewDetails = async (interviewId, updateDetails) => {
-  console.log(interviewId);
-  console.log(updateDetails.userId)
   const params = {
     TableName: Table_Name,
     Key: {
