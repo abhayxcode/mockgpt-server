@@ -133,7 +133,7 @@ function deepgramEvents(ws, deepgramConnection, index) {
       ws.finalResult += `${ws.text} `;
       
       // Sending user transcription to the ws client (back to user)
-      console.log('speech final: ', ws.finalResult)
+      // console.log('speech final: ', ws.finalResult)
       
       // if speech_final and is_final that means this text is accurate and it's a natural pause in the speakers speech. We need to send this to the assistant for processing
       if (

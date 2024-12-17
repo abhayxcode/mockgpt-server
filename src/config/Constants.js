@@ -27,7 +27,7 @@ const openAiModel = "gpt-4o-mini";
 const openAiResponseTemperature = 0;
 
 // AWS related configs
-const promptBucketName = "voice-agent-prompts";
+const promptBucketName = "mock-interview-ai";
 const greetMessageBucketName = "voice-agent-greet-messages";
 const callOutcomeBucketName = "voice-agent-call-outcomes";
 const logGroupName = "transcript-log-group";

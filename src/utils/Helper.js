@@ -261,6 +261,7 @@ async function processCallOutcome(data) {
 module.exports = {
   sleep,
   clearWsClient,
+  sendTextClient,
   sendMediaEvent,
   sendUserTranscription,
   processResponse,

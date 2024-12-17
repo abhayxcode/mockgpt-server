@@ -8,6 +8,7 @@ const {
   clearWsClient,
   sendMediaEvent,
   processCallOutcome,
+  sendTextClient,
 } = require("./utils/Helper");
 /**
  * Initializes websocket to specify actions to be performed.
@@ -15,12 +16,13 @@ const {
  */
 
 function initializeWebSocket(wss) {
-  wss.on("connection", async function connection(ws) {
+  wss.on("connection", async function connection(ws,req) {
+    const interviewSubject = req.url?.split('/')[1];
     console.log("New Connection Initiated");
 
 
       let randomNumber = Math.random().toString()
-      await makeOutboundCall(randomNumber)
+      await makeOutboundCall(randomNumber,interviewSubject)
       
       // on Start
       ws.sessionData = initializeSessionData(
@@ -70,14 +72,18 @@ function cleanupSocketSession(ws) {
 }
 
 // Inisiating a web socket sessiondata setup
-const makeOutboundCall = async (callSid) => {
-  const  clientId = "general"
-  const promptFileName =  "GeneralPrompt.txt"
+const makeOutboundCall = async (callSid,interviewSubject) => {
+  // const  clientId = "general"
+  let promptFileName =  `${interviewSubject}.txt`;
+  promptFileName = promptFileName.charAt(0).toUpperCase() + promptFileName.slice(1);
+  console.log(promptFileName);
+  // const promptFileName =  `Backend.txt`
   // const greetMessageFileName = "CollegeIntroduction.txt"
 
   
   //Generating object keys for prompt and greet message
-  const promptObjectKey = clientId + "/" + promptFileName;
+  // const promptObjectKey = clientId + "/" + promptFileName;
+  const promptObjectKey =  promptFileName;
   // const greetMessageObjectKey = clientId + "/" + greetMessageFileName;
   
   try {
@@ -102,7 +108,7 @@ const makeOutboundCall = async (callSid) => {
     const currentCallSessionData = {
       deepgramConnection: deepgramConnection,
       prompt: prompt,
-      greetMessage: 'Hello Abhay, How was your day? Lets start with your Backend interview.',
+      greetMessage: `Hello Abhay, How was your day? Lets start with your ${interviewSubject} interview.`,
       index: index,
     };
  
@@ -154,6 +160,7 @@ function initializeSessionData(callSid) {
  */
 
 function sendGreetMessage(greetMessage, ws) {
+  sendTextClient(ws,greetMessage)
   getPollyStreams(greetMessage).then((data) => {
     // clearWsClient(ws);
     sendMediaEvent(ws, data);
