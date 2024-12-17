@@ -27,7 +27,8 @@ function initializeWebSocket(wss) {
 
     // generating a random uuid for interview 
       let interviewId = uuidv4();
-      await makeOutboundCall(userId,interviewId,interviewSubject)
+      await makeOutboundCall(userId,interviewId,interviewSubject);
+
       
       // on Start
       ws.sessionData = initializeSessionData(
@@ -42,6 +43,14 @@ function initializeWebSocket(wss) {
     
     // Start The interview
     ws.interviewStartTime = new Date().toISOString();
+    
+    // Send InterviewId to client
+    const WsOutputEvent = {
+      event: "interviewId",
+      payload: interviewId
+    };
+    ws.send(JSON.stringify(WsOutputEvent));
+  
     sendGreetMessage(ws.sessionData.greetMessage, ws);
    
     // //Handling websocket messages from clients
