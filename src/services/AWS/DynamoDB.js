@@ -1,5 +1,5 @@
 const AWS = require("aws-sdk");
-const { phoneCallDetailsTableName } = require("../../config/Constants");
+const { interviewDetailsTableName } = require("../../config/Constants");
 require("dotenv").config();
 
 AWS.config.update({
@@ -9,13 +9,13 @@ AWS.config.update({
 });
 
 const dynamoClient = new AWS.DynamoDB.DocumentClient();
-const Table_Name = phoneCallDetailsTableName;
+const Table_Name = interviewDetailsTableName;
 
-// Create A new call Entry in then dynamoDB
-const createCallEntry = async (callDetails) => {
+// Create A new Interview Entry in then dynamoDB
+const createInterviewEntry = async (interviewDetails) => {
   const params = {
     TableName: Table_Name,
-    Item: callDetails,
+    Item: interviewDetails,
   };
 
   try {
@@ -27,13 +27,15 @@ const createCallEntry = async (callDetails) => {
   }
 };
 
-// Update Call details
-const updateCallDetails = async (callSid, updateDetails) => {
+// Update Interview details
+const updateInterviewDetails = async (interviewId, updateDetails) => {
+  console.log(interviewId);
+  console.log(updateDetails.userId)
   const params = {
     TableName: Table_Name,
     Key: {
-      clientId: updateDetails.clientId, // partition Key
-      callSid: callSid, // sort key
+      interviewId: interviewId, // partition Key
+      userId: updateDetails.userId, // sort key
     },
   };
 
@@ -41,10 +43,6 @@ const updateCallDetails = async (callSid, updateDetails) => {
   const expressionAttributeValues = {};
 
   // Conditionally add each field to the update expression
-  if (updateDetails.callStatus !== undefined) {
-    updateExpression.push("callStatus = :status");
-    expressionAttributeValues[":status"] = updateDetails.callStatus;
-  }
   if (updateDetails.conversationTranscript !== undefined) {
     updateExpression.push("conversationTranscript = :transcript");
     expressionAttributeValues[":transcript"] =
@@ -104,4 +102,4 @@ const updateCallDetails = async (callSid, updateDetails) => {
   }
 };
 
-module.exports = { createCallEntry, updateCallDetails };
+module.exports = { createInterviewEntry, updateInterviewDetails };

@@ -27,19 +27,15 @@ const openAiModel = "gpt-4o-mini";
 const openAiResponseTemperature = 0;
 
 // AWS related configs
-const promptBucketName = "mock-interview-ai";
-const greetMessageBucketName = "voice-agent-greet-messages";
-const callOutcomeBucketName = "voice-agent-call-outcomes";
+const promptBucketName = "mockgpt";
+const callOutcomeBucketName = "mockgpt";
 const logGroupName = "transcript-log-group";
 const logStreamName = "transcript-log-stream";
-const pollyEngine = "generative";
+const pollyEngine = "neural";
 const pollyOutputFormat = "pcm";
 const pollyVoiceId = "Ruth";
 const pollySampleRate = "8000";
-const phoneCallDetailsTableName = "voiceAgent_PhoneCallDetails";
-
-// Telephony domain URL
-const telephonyDomainUrl = "https://voice.hellogenai.in";
+const interviewDetailsTableName = "interview_InterviewTable";
 
 module.exports = {
   deepgramApiKeys,
@@ -54,7 +50,6 @@ module.exports = {
   openAiModel,
   openAiResponseTemperature,
   promptBucketName,
-  greetMessageBucketName,
   callOutcomeBucketName,
   logGroupName,
   logStreamName,
@@ -62,6 +57,5 @@ module.exports = {
   pollyOutputFormat,
   pollyVoiceId,
   pollySampleRate,
-  phoneCallDetailsTableName,
-  telephonyDomainUrl,
+  interviewDetailsTableName,
 };

@@ -1,5 +1,6 @@
-const { promptBucketName, greetMessageBucketName } = require("./config/Constants");
+const { promptBucketName, greetMessageBucketName, callOutcomeBucketName } = require("./config/Constants");
 const { getSessionData, storeSessionData } = require("./data/CallSessionData");
+const { createInterviewEntry } = require("./services/AWS/DynamoDB");
 const { getObjectFromS3 } = require("./services/AWS/S3");
 const { getPollyStreams } = require("./services/Synthesis/Polly");
 // const { hangupCall } = require("./services/Telephony/Plivo");
@@ -7,9 +8,10 @@ const { deepgramEvents, createDeepgramConnection } = require("./services/Transcr
 const {
   clearWsClient,
   sendMediaEvent,
-  processCallOutcome,
+  processInterviewOutcome,
   sendTextClient,
 } = require("./utils/Helper");
+const { v4: uuidv4 } = require('uuid');
 /**
  * Initializes websocket to specify actions to be performed.
  * @param {Websocket Connection} wss - The websocket which needs to be initialized.
@@ -21,12 +23,15 @@ function initializeWebSocket(wss) {
     console.log("New Connection Initiated");
 
 
-      let randomNumber = Math.random().toString()
-      await makeOutboundCall(randomNumber,interviewSubject)
+    const userId = '43b9ab41-ccec-4371-9966-6a1fccf885de';
+
+    // generating a random uuid for interview 
+      let interviewId = uuidv4();
+      await makeOutboundCall(userId,interviewId,interviewSubject)
       
       // on Start
       ws.sessionData = initializeSessionData(
-      randomNumber
+        interviewId
     );
     deepgramEvents(
       ws,
@@ -35,6 +40,8 @@ function initializeWebSocket(wss) {
     );
     console.log(`Starting Media Stream`);
     
+    // Start The interview
+    ws.interviewStartTime = new Date().toISOString();
     sendGreetMessage(ws.sessionData.greetMessage, ws);
    
     // //Handling websocket messages from clients
@@ -50,9 +57,9 @@ function initializeWebSocket(wss) {
     });
 
     ws.on("close", async function (code) {
-      // Process CallOutcome and update to dynamo
-      // await processCallOutcome(ws.sessionData);
-      // console.log(`Call Outcome updated`);
+      // Process Interview Outcome and update to dynamo
+      await processInterviewOutcome(ws.sessionData);
+      console.log(`Interview Review updated`);
 
       console.log(`Websocket connection closed: ${code}`);
       // cleanupSocketSession(ws);
@@ -72,29 +79,23 @@ function cleanupSocketSession(ws) {
 }
 
 // Inisiating a web socket sessiondata setup
-const makeOutboundCall = async (callSid,interviewSubject) => {
-  // const  clientId = "general"
-  let promptFileName =  `${interviewSubject}.txt`;
-  promptFileName = promptFileName.charAt(0).toUpperCase() + promptFileName.slice(1);
-  console.log(promptFileName);
-  // const promptFileName =  `Backend.txt`
-  // const greetMessageFileName = "CollegeIntroduction.txt"
+const makeOutboundCall = async (userId,interviewId,interviewSubject) => {
+  let interviewType =  interviewSubject.charAt(0).toUpperCase() + interviewSubject.slice(1)
+  let promptFileName =  interviewType + '.txt';
+  let callOutcomeFileName =  interviewType + 'FeedbackPrompt.txt';
 
-  
-  //Generating object keys for prompt and greet message
-  // const promptObjectKey = clientId + "/" + promptFileName;
   const promptObjectKey =  promptFileName;
-  // const greetMessageObjectKey = clientId + "/" + greetMessageFileName;
-  
+  const callOutcomePromptObjectKey =  callOutcomeFileName;
+
   try {
     // Fetching client specific prompt
     let prompt = await getObjectFromS3(promptBucketName, promptObjectKey);
 
-    //Fetching client specific greet message
-    // const greetMessage = await getObjectFromS3(
-    //   greetMessageBucketName,
-    //   greetMessageObjectKey
-    // );
+     // Fetching client specific callOutcome
+     const callOutcomePrompt = await getObjectFromS3(
+      callOutcomeBucketName,
+      callOutcomePromptObjectKey
+    );
 
     //Creating deepgram connection
     const { deepgramConnection, index } = await createDeepgramConnection();
@@ -106,26 +107,27 @@ const makeOutboundCall = async (callSid,interviewSubject) => {
 
     //Storing session specific data
     const currentCallSessionData = {
-      deepgramConnection: deepgramConnection,
-      prompt: prompt,
+      userId,
+      deepgramConnection,
+      prompt,
       greetMessage: `Hello Abhay, How was your day? Lets start with your ${interviewSubject} interview.`,
+      callOutcomePrompt,
       index: index,
     };
  
-    storeSessionData(callSid, currentCallSessionData);
+    storeSessionData(interviewId, currentCallSessionData);
+    
+     // Push Call Details to dynamoDB Phone call Table
+     const interviewDetails = {
+      userId,
+      interviewId,
+    };
 
-    //Sending a response back to calling function
-    // const response = {
-    //   message: "Call registered successfully!",
-    // };
-    // res.send(response);
+    createInterviewEntry(interviewDetails);
+    return;
   } catch (error) {
     // Pushing error to cloudwatch
     console.log(error);
-    // const response = {
-      // message: "Failed to initiate the call!",
-    // };
-    // res.status(500).send(response);
   }
 };
 
@@ -136,10 +138,12 @@ const makeOutboundCall = async (callSid,interviewSubject) => {
  * @param {Websocket Connection} ws - The websocket client for which session data needs to be initialized.
  */
 
-function initializeSessionData(callSid) {
-  const currentCallSessionData = getSessionData(callSid);
+function initializeSessionData(interviewId) {
+  const currentCallSessionData = getSessionData(interviewId);
   const sessionData = {
-    callSID: callSid,
+    interviewId: interviewId,
+    userId: currentCallSessionData.userId,
+    interviewStartTime: null,
     isInterruptionDetected: false,
     currentAssistantMessage: currentCallSessionData.greetMessage,
     deepgramConnection: currentCallSessionData.deepgramConnection,
@@ -147,6 +151,7 @@ function initializeSessionData(callSid) {
       { role: "system", content: currentCallSessionData.prompt },
     ],
     greetMessage: currentCallSessionData.greetMessage,
+    callOutcomePrompt: currentCallSessionData.callOutcomePrompt,
     index: currentCallSessionData.index,
    };
 

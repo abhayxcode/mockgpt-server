@@ -1,6 +1,6 @@
 const { logGroupName, logStreamName } = require("../config/Constants");
 const { pushLogEvent } = require("../services/AWS/CloudWatch");
-const { updateCallDetails } = require("../services/AWS/DynamoDB");
+const { updateInterviewDetails } = require("../services/AWS/DynamoDB");
 const {
   streamingChatCompletions,
   chatCompletions,
@@ -222,30 +222,35 @@ async function getCallOutcome(conversationDetail, callOutcomePrompt) {
 }
 
 // Process Call Outcome and update to dynamo
-async function processCallOutcome(data) {
+async function processInterviewOutcome(data) {
   try {
     let j;
     let conversationTranscript = "";
-    let callSid = data.callSID;
-    let clientId = data.clientId;
+    let interviewId = data.interviewId;
+    let userId = data.userId;
     let callOutcomePrompt = data.callOutcomePrompt;
     let messageContent = data.messageContent;
+
     for (j = 0; j < messageContent.length; j++) {
       if (messageContent[j].role !== "system")
         conversationTranscript += `${messageContent[j].role}: ${messageContent[j].content},`;
     }
-    const callOutcome = await getCallOutcome(
-      conversationTranscript,
-      callOutcomePrompt
-    );
+    
+    let callOutcome = null;
+    if(conversationTranscript){
+       callOutcome = await getCallOutcome(
+        conversationTranscript,
+        callOutcomePrompt
+      );
+    }
 
-    // Update Call details after call ends
-    const callDetails = {
-      clientId,
+    // Update Interview details after call ends
+    const interviewDetails = {
+      userId,
       conversationTranscript,
       callOutcome,
     };
-    await updateCallDetails(callSid, callDetails);
+    await updateInterviewDetails(interviewId, interviewDetails);
     return;
   } catch (error) {
     console.log(error);
@@ -267,5 +272,5 @@ module.exports = {
   processResponse,
   openAIToPolly,
   getCallOutcome,
-  processCallOutcome,
+  processInterviewOutcome,
 };
